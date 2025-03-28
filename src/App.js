@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./App.css";
 import Editor from "@monaco-editor/react";
 import { JsonView } from "react-json-view-lite";
@@ -11,14 +11,14 @@ function App() {
   const [error, setError] = useState("");
   const [editedValues, setEditedValues] = useState({
     commentary: "",
-    template: "",
+    template: "nextjs-developer",
     title: "",
     description: "",
     additional_dependencies: [],
     has_additional_dependencies: false,
     install_dependencies_command: "",
-    port: "",
-    file_path: "",
+    port: "3000",
+    file_path: "app/page.tsx",
     code: "",
   });
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -40,19 +40,18 @@ function App() {
       const parsed = JSON.parse(value);
       setParsedJson(parsed);
 
-      // Update the form fields with the parsed JSON values
       setEditedValues({
         commentary: parsed.commentary || "",
-        template: parsed.template || "",
+        template: "nextjs-developer",
         title: parsed.title || "",
         description: parsed.description || "",
         additional_dependencies: parsed.additional_dependencies || [],
         has_additional_dependencies:
           parsed.has_additional_dependencies || false,
         install_dependencies_command: parsed.install_dependencies_command || "",
-        port: parsed.port || "",
-        file_path: parsed.file_path || "",
-        code: parsed.code || "",
+        port: parsed.port || "3000",
+        file_path: "app/page.tsx",
+        code: "3000",
       });
       setIsCreatingNew(false);
     } catch (err) {
@@ -63,7 +62,6 @@ function App() {
 
   const handleInputChange = (field, value) => {
     if (field === "has_additional_dependencies" && value === false) {
-      // When unchecking the box, clear all dependencies and the install command
       setEditedValues({
         ...editedValues,
         [field]: value,
@@ -84,6 +82,7 @@ function App() {
     setEditedValues({
       ...editedValues,
       additional_dependencies: updatedDependencies,
+      install_dependencies_command: updatedDependencies.length > 0 ? "npm install " + updatedDependencies.join(" ") : "",
     });
   };
 
@@ -97,9 +96,11 @@ function App() {
   const removeDependency = (index) => {
     const updatedDependencies = [...editedValues.additional_dependencies];
     updatedDependencies.splice(index, 1);
+
     setEditedValues({
       ...editedValues,
       additional_dependencies: updatedDependencies,
+      install_dependencies_command: updatedDependencies.length > 0 ? "npm install " + updatedDependencies.join(" ") : ""
     });
   };
 
@@ -123,7 +124,6 @@ function App() {
     }
   };
 
-  // Show notification function
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
@@ -156,18 +156,17 @@ function App() {
   };
 
   const startNewJson = () => {
-    // Reset form to empty values
     setEditedValues({
       commentary: "",
-      template: "",
+      template: "nextjs-developer",
       title: "",
       description: "",
       additional_dependencies: [],
       has_additional_dependencies: false,
       install_dependencies_command: "",
-      port: "",
-      file_path: "",
-      code: "",
+      port: "3000",
+      file_path: "app/page.tsx",
+      code: "3000",
     });
     setIsCreatingNew(true);
     setActiveTab("edit");
@@ -270,6 +269,7 @@ function App() {
                   <label>Template</label>
                   <input
                     type="text"
+                    readOnly
                     value={editedValues.template}
                     onChange={(e) => handleInputChange("template", e.target.value)}
                     placeholder="Template name"
@@ -281,6 +281,7 @@ function App() {
                     <label>Port</label>
                     <input
                       type="number"
+                      readOnly
                       value={editedValues.port}
                       onChange={(e) => handleInputChange("port", parseInt(e.target.value) || "")}
                       placeholder="3000"
@@ -291,6 +292,7 @@ function App() {
                     <label>File Path</label>
                     <input
                       type="text"
+                      readOnly
                       value={editedValues.file_path}
                       onChange={(e) => handleInputChange("file_path", e.target.value)}
                       placeholder="app/page.tsx"
