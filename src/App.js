@@ -40,6 +40,9 @@ function App() {
       const parsed = JSON.parse(value);
       setParsedJson(parsed);
 
+      // Convert escaped newlines in code back to actual newlines for editing
+      const codeWithNewlines = parsed.code ? parsed.code.replace(/\\n/g, "\n") : "";
+
       setEditedValues({
         commentary: parsed.commentary || "",
         template: "nextjs-developer",
@@ -51,7 +54,7 @@ function App() {
         install_dependencies_command: parsed.install_dependencies_command || "",
         port: "3000",
         file_path: "app/page.tsx",
-        code: parsed.code || "",
+        code: codeWithNewlines,
       });
       setIsCreatingNew(false);
     } catch (err) {
@@ -108,6 +111,7 @@ function App() {
     try {
       const newJson = {
         ...editedValues,
+        code: editedValues.code.replace(/\n/g, "\\n"),
         additional_dependencies: editedValues.has_additional_dependencies 
           ? editedValues.additional_dependencies 
           : [],
@@ -170,6 +174,18 @@ function App() {
     });
     setIsCreatingNew(true);
     setActiveTab("edit");
+  };
+
+  const copyCodeToClipboard = () => {
+    navigator.clipboard
+      .writeText(editedValues.code)
+      .then(() => {
+        showNotification("Code copied to clipboard!");
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+        showNotification("Failed to copy to clipboard", "error");
+      });
   };
 
   return (
@@ -385,10 +401,23 @@ function App() {
 
                 <div className="form-group">
                   <label>Code</label>
-                  <div className="editor-container">
+                  <div className="editor-container" style={{ position: "relative" }}>
+                    <button 
+                      className="icon-button primary" 
+                      onClick={copyCodeToClipboard} 
+                      title="Copy code to clipboard"
+                      style={{
+                        position: "absolute", 
+                        top: "8px", 
+                        right: "8px",
+                        zIndex: 10
+                      }}
+                    >
+                      <FiCopy />
+                    </button>
                     <Editor
-                      height="300px"
-                      defaultLanguage="javascript"
+                      height="450px"
+                      defaultLanguage="typescript"
                       value={editedValues.code}
                       onChange={(value) => handleInputChange("code", value)}
                       theme="vs-dark"
