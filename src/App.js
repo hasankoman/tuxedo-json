@@ -49,9 +49,9 @@ function App() {
         has_additional_dependencies:
           parsed.has_additional_dependencies || false,
         install_dependencies_command: parsed.install_dependencies_command || "",
-        port: parsed.port || "3000",
+        port: "3000",
         file_path: "app/page.tsx",
-        code: "3000",
+        code: parsed.code || "",
       });
       setIsCreatingNew(false);
     } catch (err) {
