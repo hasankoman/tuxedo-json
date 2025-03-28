@@ -148,7 +148,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "updated-portfolio.json";
+    a.download = "updated-tuxedo.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -182,7 +182,7 @@ function App() {
       )}
       
       <header className="app-header">
-        <h1>Portfolio JSON Editor</h1>
+        <h1>Tuxedo JSON Editor</h1>
         <div className="tabs">
           <button 
             className={`tab-button ${activeTab === "input" ? "active" : ""}`}
@@ -211,7 +211,7 @@ function App() {
         {activeTab === "input" && (
           <div className="card">
             <h2>Input JSON</h2>
-            <p className="section-description">Paste your portfolio JSON data here to begin editing or create a new JSON from scratch</p>
+            <p className="section-description">Paste your tuxedo JSON data here to begin editing or create a new JSON from scratch</p>
             <div className="editor-container">
               <Editor
                 height="400px"
@@ -251,8 +251,8 @@ function App() {
 
         {activeTab === "edit" && (parsedJson || isCreatingNew) && (
           <div className="card">
-            <h2>Edit Portfolio Data</h2>
-            <p className="section-description">Modify the fields below to update your portfolio data</p>
+            <h2>Edit Tuxedo JSON</h2>
+            <p className="section-description">Modify the fields below to update your tuxedo json</p>
             
             <div className="form-grid">
               <div className="form-column">
