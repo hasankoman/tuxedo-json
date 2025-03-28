@@ -170,7 +170,7 @@ function App() {
       install_dependencies_command: "",
       port: "3000",
       file_path: "app/page.tsx",
-      code: "3000",
+      code: "",
     });
     setIsCreatingNew(true);
     setActiveTab("edit");
