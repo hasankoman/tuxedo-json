@@ -1,9 +1,19 @@
 import React, { useState } from "react";
 import "./App.css";
-import Editor from "@monaco-editor/react";
+import Editor, { DiffEditor } from "@monaco-editor/react";
 import { JsonView } from "react-json-view-lite";
 import "react-json-view-lite/dist/index.css";
-import { FiCopy, FiDownload, FiPlus, FiTrash2, FiEdit, FiCheck, FiEye } from "react-icons/fi";
+import {
+  FiCopy,
+  FiDownload,
+  FiPlus,
+  FiTrash2,
+  FiEdit,
+  FiCheck,
+  FiColumns,
+  FiMaximize,
+  FiMinimize,
+} from "react-icons/fi";
 
 function App() {
   const [jsonInput, setJsonInput] = useState("");
@@ -26,7 +36,16 @@ function App() {
   const [outputJson, setOutputJson] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState("input");
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+    type: "",
+  });
+  const [originalCode, setOriginalCode] = useState("");
+  const [showDiffView, setShowDiffView] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [diffEditorRef, setDiffEditorRef] = useState(null);
+  const [editorRef, setEditorRef] = useState(null);
 
   const handleJsonInputChange = (value) => {
     setJsonInput(value);
@@ -41,7 +60,12 @@ function App() {
       setParsedJson(parsed);
 
       // Convert escaped newlines in code back to actual newlines for editing
-      const codeWithNewlines = parsed.code ? parsed.code.replace(/\\n/g, "\n") : "";
+      const codeWithNewlines = parsed.code
+        ? parsed.code.replace(/\\n/g, "\n")
+        : "";
+
+      // Store the original code for diff view
+      setOriginalCode(codeWithNewlines);
 
       setEditedValues({
         commentary: parsed.commentary || "",
@@ -69,7 +93,7 @@ function App() {
         ...editedValues,
         [field]: value,
         additional_dependencies: [],
-        install_dependencies_command: ""
+        install_dependencies_command: "",
       });
     } else {
       setEditedValues({
@@ -85,7 +109,10 @@ function App() {
     setEditedValues({
       ...editedValues,
       additional_dependencies: updatedDependencies,
-      install_dependencies_command: updatedDependencies.length > 0 ? "npm install " + updatedDependencies.join(" ") : "",
+      install_dependencies_command:
+        updatedDependencies.length > 0
+          ? "npm install " + updatedDependencies.join(" ")
+          : "",
     });
   };
 
@@ -103,7 +130,10 @@ function App() {
     setEditedValues({
       ...editedValues,
       additional_dependencies: updatedDependencies,
-      install_dependencies_command: updatedDependencies.length > 0 ? "npm install " + updatedDependencies.join(" ") : ""
+      install_dependencies_command:
+        updatedDependencies.length > 0
+          ? "npm install " + updatedDependencies.join(" ")
+          : "",
     });
   };
 
@@ -112,12 +142,12 @@ function App() {
       const newJson = {
         ...editedValues,
         code: editedValues.code.replace(/\n/g, "\\n"),
-        additional_dependencies: editedValues.has_additional_dependencies 
-          ? editedValues.additional_dependencies 
+        additional_dependencies: editedValues.has_additional_dependencies
+          ? editedValues.additional_dependencies
           : [],
         install_dependencies_command: editedValues.has_additional_dependencies
           ? editedValues.install_dependencies_command
-          : ""
+          : "",
       };
 
       const formattedJson = JSON.stringify(newJson, null, 2);
@@ -160,6 +190,8 @@ function App() {
   };
 
   const startNewJson = () => {
+    setJsonInput("");
+    setParsedJson(null);
     setEditedValues({
       commentary: "",
       template: "nextjs-developer",
@@ -176,16 +208,28 @@ function App() {
     setActiveTab("edit");
   };
 
-  const copyCodeToClipboard = () => {
-    navigator.clipboard
-      .writeText(editedValues.code)
-      .then(() => {
-        showNotification("Code copied to clipboard!");
-      })
-      .catch((err) => {
-        console.error("Failed to copy: ", err);
-        showNotification("Failed to copy to clipboard", "error");
-      });
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const copyOutputCodeToClipboard = () => {
+    try {
+      const parsedOutput = JSON.parse(outputJson);
+      // Get the code value and replace escaped newlines with actual newlines
+      const codeToClipboard = parsedOutput.code.replace(/\\n/g, "\n");
+
+      navigator.clipboard
+        .writeText(codeToClipboard)
+        .then(() => {
+          showNotification("Code copied to clipboard!");
+        })
+        .catch((err) => {
+          console.error("Failed to copy: ", err);
+          showNotification("Failed to copy to clipboard", "error");
+        });
+    } catch (err) {
+      showNotification("Failed to extract code from JSON", "error");
+    }
   };
 
   return (
@@ -195,24 +239,24 @@ function App() {
           {notification.message}
         </div>
       )}
-      
+
       <header className="app-header">
         <h1>Tuxedo JSON Editor</h1>
         <div className="tabs">
-          <button 
+          <button
             className={`tab-button ${activeTab === "input" ? "active" : ""}`}
             onClick={() => setActiveTab("input")}
           >
             Input
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === "edit" ? "active" : ""}`}
             onClick={() => setActiveTab("edit")}
             disabled={!parsedJson && !isCreatingNew}
           >
             Create/Edit
           </button>
-          <button 
+          <button
             className={`tab-button ${activeTab === "output" ? "active" : ""}`}
             onClick={() => setActiveTab("output")}
             disabled={!showPreview}
@@ -226,7 +270,10 @@ function App() {
         {activeTab === "input" && (
           <div className="card">
             <h2>Input JSON</h2>
-            <p className="section-description">Paste your tuxedo JSON data here to begin editing or create a new JSON from scratch</p>
+            <p className="section-description">
+              Paste your tuxedo JSON data here to begin editing or create a new
+              JSON from scratch
+            </p>
             <div className="editor-container">
               <Editor
                 height="400px"
@@ -242,16 +289,17 @@ function App() {
                 }}
               />
             </div>
-            {error && <div className="error-message"><span>⚠️</span> {error}</div>}
+            {error && (
+              <div className="error-message">
+                <span>⚠️</span> {error}
+              </div>
+            )}
 
             <div className="form-actions">
-              <button
-                className="secondary-button"
-                onClick={startNewJson}
-              >
+              <button className="secondary-button" onClick={startNewJson}>
                 <FiPlus /> Create New
               </button>
-              
+
               {parsedJson && (
                 <button
                   className="primary-button"
@@ -267,8 +315,10 @@ function App() {
         {activeTab === "edit" && (parsedJson || isCreatingNew) && (
           <div className="card">
             <h2>Edit Tuxedo JSON</h2>
-            <p className="section-description">Modify the fields below to update your tuxedo json</p>
-            
+            <p className="section-description">
+              Modify the fields below to update your tuxedo json
+            </p>
+
             <div className="form-grid">
               <div className="form-column">
                 <div className="form-group">
@@ -287,7 +337,9 @@ function App() {
                     type="text"
                     readOnly
                     value={editedValues.template}
-                    onChange={(e) => handleInputChange("template", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("template", e.target.value)
+                    }
                     placeholder="Template name"
                   />
                 </div>
@@ -299,7 +351,12 @@ function App() {
                       type="number"
                       readOnly
                       value={editedValues.port}
-                      onChange={(e) => handleInputChange("port", parseInt(e.target.value) || "")}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "port",
+                          parseInt(e.target.value) || ""
+                        )
+                      }
                       placeholder="3000"
                     />
                   </div>
@@ -310,7 +367,9 @@ function App() {
                       type="text"
                       readOnly
                       value={editedValues.file_path}
-                      onChange={(e) => handleInputChange("file_path", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("file_path", e.target.value)
+                      }
                       placeholder="app/page.tsx"
                     />
                   </div>
@@ -320,7 +379,9 @@ function App() {
                   <label>Description</label>
                   <textarea
                     value={editedValues.description}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
                     rows={3}
                     placeholder="Enter a description for your project"
                   />
@@ -330,58 +391,81 @@ function App() {
                   <label>Commentary</label>
                   <textarea
                     value={editedValues.commentary}
-                    onChange={(e) => handleInputChange("commentary", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("commentary", e.target.value)
+                    }
                     rows={4}
                     placeholder="Add detailed commentary about your project"
                   />
                 </div>
               </div>
-              
+
               <div className="form-column">
                 <div className="form-group">
                   <div className="checkbox-container">
-                    <label className="checkbox-label" style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                    <label
+                      className="checkbox-label"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <input
                         type="checkbox"
                         checked={editedValues.has_additional_dependencies}
-                        onChange={(e) => handleInputChange("has_additional_dependencies", e.target.checked)}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "has_additional_dependencies",
+                            e.target.checked
+                          )
+                        }
                         style={{
                           width: "16px",
-                          height: "16px"
+                          height: "16px",
                         }}
                       />
                       Has Additional Dependencies
                     </label>
                   </div>
                 </div>
-                
+
                 {editedValues.has_additional_dependencies && (
                   <>
                     <div className="form-group">
                       <label>Additional Dependencies</label>
                       <div className="dependencies-container">
                         {editedValues.additional_dependencies.length === 0 && (
-                          <p className="empty-state">No dependencies added yet</p>
+                          <p className="empty-state">
+                            No dependencies added yet
+                          </p>
                         )}
-                        
-                        {editedValues.additional_dependencies.map((dep, index) => (
-                          <div key={index} className="dependency-item">
-                            <input
-                              type="text"
-                              value={dep}
-                              onChange={(e) => handleDependencyChange(index, e.target.value)}
-                              placeholder="e.g., react-router-dom"
-                            />
-                            <button
-                              className="icon-button danger"
-                              onClick={() => removeDependency(index)}
-                              title="Remove dependency"
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </div>
-                        ))}
-                        <button className="secondary-button" onClick={addDependency}>
+
+                        {editedValues.additional_dependencies.map(
+                          (dep, index) => (
+                            <div key={index} className="dependency-item">
+                              <input
+                                type="text"
+                                value={dep}
+                                onChange={(e) =>
+                                  handleDependencyChange(index, e.target.value)
+                                }
+                                placeholder="e.g., react-router-dom"
+                              />
+                              <button
+                                className="icon-button danger"
+                                onClick={() => removeDependency(index)}
+                                title="Remove dependency"
+                              >
+                                <FiTrash2 />
+                              </button>
+                            </div>
+                          )
+                        )}
+                        <button
+                          className="secondary-button"
+                          onClick={addDependency}
+                        >
                           <FiPlus /> Add Dependency
                         </button>
                       </div>
@@ -392,7 +476,12 @@ function App() {
                       <input
                         type="text"
                         value={editedValues.install_dependencies_command}
-                        onChange={(e) => handleInputChange("install_dependencies_command", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "install_dependencies_command",
+                            e.target.value
+                          )
+                        }
                         placeholder="e.g., npm install"
                       />
                     </div>
@@ -401,46 +490,151 @@ function App() {
 
                 <div className="form-group">
                   <label>Code</label>
-                  <div className="editor-container" style={{ position: "relative" }}>
-                    <button 
-                      className="icon-button primary" 
-                      onClick={copyCodeToClipboard} 
-                      title="Copy code to clipboard"
-                      style={{
-                        position: "absolute", 
-                        top: "8px", 
-                        right: "8px",
-                        zIndex: 10
-                      }}
-                    >
-                      <FiCopy />
-                    </button>
-                    <Editor
-                      height="450px"
-                      defaultLanguage="typescript"
-                      value={editedValues.code}
-                      onChange={(value) => handleInputChange("code", value)}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        wordWrap: "on",
-                        fontSize: 14,
-                        lineHeight: 24,
-                      }}
-                    />
+                  <div
+                    className={`editor-container ${
+                      isFullscreen ? "fullscreen" : ""
+                    }`}
+                    style={{ position: "relative" }}
+                  >
+                    <div className="editor-toolbar">
+                      <div className="toolbar-content">
+                        <div className="toolbar-group">
+                          {!isCreatingNew && (
+                            <div className="button-group">
+                              <button
+                                className={`toolbar-button ${
+                                  !showDiffView ? "active" : ""
+                                }`}
+                                onClick={() => setShowDiffView(false)}
+                                title="Switch to normal editor"
+                              >
+                                <span className="button-icon">
+                                  <FiEdit />
+                                </span>
+                                <span className="button-text">Edit</span>
+                              </button>
+                              <button
+                                className={`toolbar-button ${
+                                  showDiffView ? "active" : ""
+                                }`}
+                                onClick={() => setShowDiffView(true)}
+                                title="Show diff with original"
+                              >
+                                <span className="button-icon">
+                                  <FiColumns />
+                                </span>
+                                <span className="button-text">Diff</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="toolbar-group">
+                          <button
+                            className="toolbar-button"
+                            onClick={toggleFullscreen}
+                            title={
+                              isFullscreen
+                                ? "Exit fullscreen"
+                                : "Enter fullscreen"
+                            }
+                          >
+                            <span className="button-icon">
+                              {isFullscreen ? <FiMinimize /> : <FiMaximize />}
+                            </span>
+                            <span className="button-text">
+                              {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {showDiffView && !isCreatingNew ? (
+                      <div className="diff-container">
+                        <div className="diff-labels">
+                          <div className="diff-label original">
+                            Original Code
+                          </div>
+                          <div className="diff-label modified">
+                            Modified Code
+                          </div>
+                        </div>
+                        <DiffEditor
+                          height={isFullscreen ? "calc(100vh - 60px)" : "450px"}
+                          language="typescript"
+                          original={originalCode}
+                          modified={editedValues.code}
+                          theme="vs-dark"
+                          options={{
+                            minimap: { enabled: false },
+                            wordWrap: "on",
+                            fontSize: 14,
+                            lineHeight: 24,
+                            readOnly: false,
+                            renderSideBySide: true,
+                          }}
+                          onMount={(editor) => {
+                            setDiffEditorRef(editor);
+                            // Set modified editor as editable
+                            const modifiedEditor = editor.getModifiedEditor();
+                            modifiedEditor.onDidChangeModelContent(() => {
+                              handleInputChange(
+                                "code",
+                                modifiedEditor.getValue()
+                              );
+                            });
+                          }}
+                          beforeMount={(monaco) => {
+                            // Ensure proper cleanup of previous models
+                            if (diffEditorRef) {
+                              diffEditorRef.dispose();
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <Editor
+                        height={isFullscreen ? "calc(100vh - 60px)" : "450px"}
+                        defaultLanguage="typescript"
+                        value={editedValues.code}
+                        onChange={(value) => handleInputChange("code", value)}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          wordWrap: "on",
+                          fontSize: 14,
+                          lineHeight: 24,
+                        }}
+                        onMount={(editor) => {
+                          setEditorRef(editor);
+                        }}
+                        beforeMount={(monaco) => {
+                          // Ensure proper cleanup
+                          if (editorRef) {
+                            editorRef.dispose();
+                          }
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="form-actions">
-              <button className="secondary-button" onClick={() => setActiveTab("input")}>
+              <button
+                className="secondary-button"
+                onClick={() => setActiveTab("input")}
+              >
                 Back to Input
               </button>
-              <button className="primary-button" onClick={() => {
-                generateJson();
-                setActiveTab("output");
-              }}>
+              <button
+                className="primary-button"
+                onClick={() => {
+                  generateJson();
+                  setActiveTab("output");
+                }}
+              >
                 <FiCheck /> Generate JSON
               </button>
             </div>
@@ -450,21 +644,41 @@ function App() {
         {activeTab === "output" && showPreview && (
           <div className="card">
             <h2>Output JSON</h2>
-            <p className="section-description">Review, copy or download the updated JSON</p>
-            
+            <p className="section-description">
+              Review, copy or download the updated JSON
+            </p>
+
             <div className="preview-container">
               <JsonView data={JSON.parse(outputJson)} />
             </div>
-            
+
             <div className="form-actions">
-              <button className="secondary-button" onClick={() => setActiveTab("edit")}>
+              <button
+                className="secondary-button"
+                onClick={() => setActiveTab("edit")}
+              >
                 Back to Editor
               </button>
               <div className="action-buttons">
-                <button className="icon-button primary" onClick={copyToClipboard} title="Copy to clipboard">
-                  <FiCopy /> Copy
+                <button
+                  className="icon-button primary"
+                  onClick={copyOutputCodeToClipboard}
+                  title="Copy code to clipboard"
+                >
+                  <FiCopy /> Copy Code
                 </button>
-                <button className="icon-button success" onClick={downloadJson} title="Download JSON file">
+                <button
+                  className="icon-button primary"
+                  onClick={copyToClipboard}
+                  title="Copy JSON to clipboard"
+                >
+                  <FiCopy /> Copy JSON
+                </button>
+                <button
+                  className="icon-button success"
+                  onClick={downloadJson}
+                  title="Download JSON file"
+                >
                   <FiDownload /> Download
                 </button>
               </div>
