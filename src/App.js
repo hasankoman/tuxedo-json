@@ -232,6 +232,20 @@ function App() {
     }
   };
 
+  const copyEditorCodeToClipboard = () => {
+    const codeToClipboard = editedValues.code;
+    
+    navigator.clipboard
+      .writeText(codeToClipboard)
+      .then(() => {
+        showNotification("Code copied to clipboard!");
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+        showNotification("Failed to copy to clipboard", "error");
+      });
+  };
+
   return (
     <div className="app-container">
       {notification.show && (
@@ -527,6 +541,17 @@ function App() {
                               </button>
                             </div>
                           )}
+                          
+                          <button
+                            className="toolbar-button"
+                            onClick={copyEditorCodeToClipboard}
+                            title="Copy code to clipboard"
+                          >
+                            <span className="button-icon">
+                              <FiCopy />
+                            </span>
+                            <span className="button-text">Copy Code</span>
+                          </button>
                         </div>
 
                         <div className="toolbar-group">
