@@ -13,6 +13,7 @@ import {
   FiColumns,
   FiMaximize,
   FiMinimize,
+  FiClipboard,
 } from "react-icons/fi";
 
 function App() {
@@ -88,31 +89,86 @@ function App() {
   };
 
   const handleInputChange = (field, value) => {
+    let updatedValues = { ...editedValues };
+
     if (field === "has_additional_dependencies" && value === false) {
-      setEditedValues({
-        ...editedValues,
+      updatedValues = {
+        ...updatedValues,
         [field]: value,
         additional_dependencies: [],
         install_dependencies_command: "",
-      });
+      };
+    } else if (field === "install_dependencies_command") {
+      // Komut alanını önce güncelle
+      updatedValues = { ...updatedValues, [field]: value };
+
+      const command = value.trim().toLowerCase();
+      let dependencies = [];
+      let commandPrefix = "";
+
+      if (command.startsWith("npm install")) {
+        commandPrefix = "npm install";
+      } else if (command.startsWith("npm i")) {
+        commandPrefix = "npm i";
+      } else if (command.startsWith("yarn add")) {
+        commandPrefix = "yarn add";
+      } else if (command.startsWith("pnpm add")) {
+        commandPrefix = "pnpm add";
+      }
+      // Gerekirse daha fazla paket yöneticisi ekleyin
+
+      if (commandPrefix) {
+        dependencies = command
+          .substring(commandPrefix.length)
+          .split(" ")
+          .map((dep) => dep.trim())
+          .filter(
+            (dep) => dep && !dep.startsWith("-") // Boş stringleri ve bayrakları filtrele
+          );
+      }
+
+      // Bağımlılıkları yalnızca ayrıştırma sonucuna göre güncelle
+      if (dependencies.length > 0) {
+        // Bağımlılıklar bulundu: listeyi güncelle ve onay kutusunun işaretli olduğundan emin ol
+        updatedValues = {
+          ...updatedValues,
+          additional_dependencies: dependencies,
+          has_additional_dependencies: true, // Bağımlılıklar bulunursa kutuyu otomatik işaretle
+        };
+      } else {
+        // Ayrıştırma başarısız olursa veya hiçbir şey bulamazsa (örn. komut silindi),
+        // bağımlılık listesini temizle. Onay kutusunun durumunu değiştirme.
+        // Kullanıcı isterse manuel olarak işaretini kaldırabilir.
+        updatedValues = {
+          ...updatedValues,
+          additional_dependencies: [],
+        };
+      }
     } else {
-      setEditedValues({
-        ...editedValues,
+      // Diğer alanları işle
+      updatedValues = {
+        ...updatedValues,
         [field]: value,
-      });
+      };
     }
+    setEditedValues(updatedValues);
   };
 
   const handleDependencyChange = (index, value) => {
     const updatedDependencies = [...editedValues.additional_dependencies];
     updatedDependencies[index] = value;
+
+    // Regenerate install command based on current dependencies
+    const commandBase = "npm install "; // Or determine based on project/preference
+    const newInstallCommand =
+      updatedDependencies.length > 0
+        ? commandBase + updatedDependencies.join(" ")
+        : "";
+
     setEditedValues({
       ...editedValues,
       additional_dependencies: updatedDependencies,
-      install_dependencies_command:
-        updatedDependencies.length > 0
-          ? "npm install " + updatedDependencies.join(" ")
-          : "",
+      install_dependencies_command: newInstallCommand, // Update command when dependencies change manually
     });
   };
 
@@ -127,13 +183,17 @@ function App() {
     const updatedDependencies = [...editedValues.additional_dependencies];
     updatedDependencies.splice(index, 1);
 
+    // Regenerate install command based on current dependencies
+    const commandBase = "npm install "; // Or determine based on project/preference
+    const newInstallCommand =
+      updatedDependencies.length > 0
+        ? commandBase + updatedDependencies.join(" ")
+        : "";
+
     setEditedValues({
       ...editedValues,
       additional_dependencies: updatedDependencies,
-      install_dependencies_command:
-        updatedDependencies.length > 0
-          ? "npm install " + updatedDependencies.join(" ")
-          : "",
+      install_dependencies_command: newInstallCommand, // Update command when dependencies change manually
     });
   };
 
@@ -234,7 +294,7 @@ function App() {
 
   const copyEditorCodeToClipboard = () => {
     const codeToClipboard = editedValues.code;
-    
+
     navigator.clipboard
       .writeText(codeToClipboard)
       .then(() => {
@@ -243,6 +303,37 @@ function App() {
       .catch((err) => {
         console.error("Failed to copy: ", err);
         showNotification("Failed to copy to clipboard", "error");
+      });
+  };
+
+  const pasteCodeFromClipboard = () => {
+    navigator.clipboard
+      .readText()
+      .then((text) => {
+        if (text) {
+          handleInputChange("code", text); // Use handleInputChange to update state
+          showNotification("Code pasted from clipboard!");
+          // Optionally, focus the editor after pasting
+          if (editorRef) {
+            editorRef.focus();
+          } else if (diffEditorRef) {
+            diffEditorRef.getModifiedEditor().focus();
+          }
+        } else {
+          showNotification("Clipboard is empty", "warning");
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to read clipboard contents: ", err);
+        // Check for Permissions API if needed for more robust error handling
+        if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+          showNotification(
+            "Clipboard permission denied. Please allow access in your browser settings.",
+            "error"
+          );
+        } else {
+          showNotification("Failed to paste from clipboard", "error");
+        }
       });
   };
 
@@ -496,7 +587,7 @@ function App() {
                             e.target.value
                           )
                         }
-                        placeholder="e.g., npm install"
+                        placeholder="e.g., npm install package1 package2"
                       />
                     </div>
                   </>
@@ -541,7 +632,7 @@ function App() {
                               </button>
                             </div>
                           )}
-                          
+
                           <button
                             className="toolbar-button"
                             onClick={copyEditorCodeToClipboard}
@@ -551,6 +642,16 @@ function App() {
                               <FiCopy />
                             </span>
                             <span className="button-text">Copy Code</span>
+                          </button>
+                          <button
+                            className="toolbar-button"
+                            onClick={pasteCodeFromClipboard}
+                            title="Paste code from clipboard"
+                          >
+                            <span className="button-icon">
+                              <FiClipboard />
+                            </span>
+                            <span className="button-text">Paste Code</span>
                           </button>
                         </div>
 

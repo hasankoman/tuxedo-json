@@ -680,3 +680,156 @@ textarea:focus {
 .diff-label.modified {
   border-right: 3px solid #55ff55;
 }
+
+/* Dependencies section styling */
+.dependency-section {
+  border: 1px solid #2a3033;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  background-color: rgba(42, 48, 51, 0.5);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+  accent-color: #0ea5e9;
+}
+
+.dependency-content {
+  margin-top: 12px;
+}
+
+.command-input-container {
+  margin-bottom: 16px;
+}
+
+.command-field {
+  position: relative;
+}
+
+.command-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #374151;
+  background-color: #111827;
+  color: #e5e7eb;
+  font-family: monospace;
+}
+
+.dependencies-manager {
+  margin-top: 16px;
+}
+
+.dependencies-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.add-dependency-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background-color: #1e40af;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.add-dependency-btn:hover {
+  background-color: #2563eb;
+}
+
+.dependencies-list {
+  min-height: 80px;
+}
+
+.empty-dependencies {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  background-color: rgba(17, 24, 39, 0.4);
+  border-radius: 6px;
+  text-align: center;
+  padding: 16px;
+}
+
+.empty-dependencies p {
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.empty-dependencies small {
+  color: #9ca3af;
+}
+
+.dependency-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dependency-tag {
+  display: flex;
+  align-items: center;
+  background-color: #1e3a8a;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #2563eb;
+}
+
+.dependency-tag input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  padding: 4px 8px;
+  min-width: 100px;
+  width: auto;
+}
+
+.dependency-tag input:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.remove-tag {
+  background: none;
+  border: none;
+  color: #93c5fd;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 4px 4px 0;
+}
+
+.remove-tag:hover {
+  color: white;
+  background-color: rgba(239, 68, 68, 0.7);
+}
